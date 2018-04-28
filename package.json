@@ -1,0 +1,24 @@
+{
+  "name": "mr_clever_experimental_3",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:tdzl2003/mr_clever_experimental_3.git",
+  "author": "tdzl2003 <dy@tdzl.cn>",
+  "license": "MIT",
+  "scripts": {
+    "start": "cross-env NODE_ENV=development nodemon ./bin/main.js"
+  },
+  "dependencies": {
+    "request": "^2.85.0",
+    "request-promise": "^4.2.2",
+    "tough-cookie": "^2.3.4"
+  },
+  "devDependencies": {
+    "cross-env": "^5.1.4",
+    "nodemon": "^1.17.3"
+  },
+  "nodemonConfig": {
+    "ignore": ["cookie.json"],
+    "delay": "2500"
+  }
+}
