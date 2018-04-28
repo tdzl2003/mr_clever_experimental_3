@@ -18,13 +18,13 @@ exports.get = function(url, options) {
   return request.get(url, options);
 };
 
-exports.postJSON = async function(url, data, headers) {
+exports.postForm = async function(url, data, headers) {
   if (DEBUG) {
     console.log(`POST ${url} ${JSON.stringify(data)}\n`);
   }
 
   const resp = await request.post(url, {
-    body: data,
+    form: data,
     headers: headers || DEFAULT_HEADERS,
     json: true,
   });

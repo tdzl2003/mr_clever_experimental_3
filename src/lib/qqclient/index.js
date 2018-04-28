@@ -1,4 +1,5 @@
 const request = require('./request');
+const { SMART_QQ_URL } = require('./constants');
 
 const clientid = 53999199;
 let ptwebqq = '';
@@ -7,7 +8,8 @@ let psessionid = '';
 let account = '';
 
 async function loginWithCookie() {
-  let resp = await request.postJSON('http://d1.web2.qq.com/channel/login2', {
+  ptwebqq = request.getCookie(SMART_QQ_URL, 'ptwebqq');
+  let resp = await request.postForm('http://d1.web2.qq.com/channel/login2', {
     r: JSON.stringify({
       ptwebqq,
       clientid,
@@ -29,6 +31,7 @@ async function loginWithCookie() {
   psessionid = resp.result.psessionid;
   account = resp.result.uin;
   vfwebqq = resp.result.vfwebqq;
+  return true;
 }
 
 function findWithRegexp(html, reg) {
@@ -76,8 +79,7 @@ async function loginWithQrCode() {
         encoding: null,
       },
     );
-
-    console.log(map);
+    require('../server/state').setLoginQrCode(map);
 
     const qrsig = request.getCookie('http://ptlogin2.qq.com', 'qrsig');
 
@@ -90,19 +92,23 @@ async function loginWithQrCode() {
       );
 
       let retcode;
-      function ptuiCB(code, arg2, arg3, arg4, message) {
-        console.log(code);
-        retcode = code;
+      let redirection_url;
+      function ptuiCB(...args) {
+        retcode = args[0] | 0;
+        console.log(args);
+        redirection_url = args[2];
       }
       eval(resp);
 
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      if (resp.retcode === 0) {
+      if (retcode === 0) {
+        console.log(await request.get(redirection_url));
+        require('../server/state').setLoginQrCode(null);
         // Login successed.
         return;
       }
-      if (resp.retcode === 65) {
+      if (retcode === 65) {
         // qrcode expired
         break;
       }
@@ -121,6 +127,12 @@ async function login() {
 
   // try qrcode:
   await loginWithQrCode();
+
+  if (!(await loginWithCookie())) {
+    throw new Error('Login failed.');
+  }
+
+  console.log('Login successful with qrcode.');
 }
 
 exports.login = login;
