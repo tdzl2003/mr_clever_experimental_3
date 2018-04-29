@@ -1,4 +1,8 @@
 const qqclient = require('./lib/qqclient');
+const config = require('../config.json');
+const fs = require('fs');
+
+const csvStringify = require('csv-stringify');
 
 require('./lib/server').listen(8094, 'localhost', () => {
   console.log('Server Ready.');
@@ -9,6 +13,40 @@ const waitForSigInt = new Promise((resolve, reject) => {
     reject(new Error('User pressed Ctrl+C'));
   });
 });
+
+let csvStream = null;
+
+if (config.features.recordMessage) {
+  csvStream = csvStringify();
+  if (!fs.existsSync('data')) {
+    fs.mkdirSync('data');
+  }
+  const { RollingFileStream } = require('streamroller');
+  const stream = new RollingFileStream('./data/message.csv', 4 << 20, {
+    compress: true,
+    keepFileExt: true,
+  });
+  csvStream.pipe(stream);
+}
+
+function onMessage(msg) {
+  switch (msg.type) {
+    case 'message':
+    case 'group_message':
+      csvStream.write([
+        msg.type,
+        msg.content,
+        msg.send_uin,
+        msg.time,
+        msg.nick,
+        msg.markname,
+        msg.group_code,
+        msg.group_name,
+        msg.card_name,
+      ]);
+      break;
+  }
+}
 
 async function main() {
   try {
@@ -22,6 +60,10 @@ async function main() {
         qqclient.pullMessage(),
       ]);
       console.log(messages);
+
+      for (const message of messages) {
+        await onMessage(message);
+      }
     }
   } finally {
     qqclient.saveCache();

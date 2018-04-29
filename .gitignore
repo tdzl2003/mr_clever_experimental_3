@@ -5,3 +5,5 @@ npm-debug.log*
 cookie.json
 
 cache
+config.json
+data

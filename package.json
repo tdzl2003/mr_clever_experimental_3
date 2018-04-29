@@ -6,13 +6,16 @@
   "author": "tdzl2003 <dy@tdzl.cn>",
   "license": "MIT",
   "scripts": {
+    "postinstall": "node ./bin/copy-config.js",
     "start": "cross-env NODE_ENV=development nodemon ./bin/main.js"
   },
   "dependencies": {
+    "csv-stringify": "^3.0.0",
     "koa": "^2.5.1",
     "koa-router": "^7.4.0",
     "request": "^2.85.0",
     "request-promise": "^4.2.2",
+    "streamroller": "^0.8.2",
     "tough-cookie": "^2.3.4"
   },
   "devDependencies": {
@@ -20,7 +23,11 @@
     "nodemon": "^1.17.3"
   },
   "nodemonConfig": {
-    "ignore": ["cookie.json", "cache/*", "data/*"],
+    "ignore": [
+      "cookie.json",
+      "cache/*",
+      "data/*"
+    ],
     "delay": "2500"
   }
 }

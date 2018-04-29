@@ -464,6 +464,8 @@ async function pullMessage() {
               if (nick) {
                 ret.nick = nick;
               }
+              ret.markname = knownMarknames[value.send_uin];
+
               arr.push(ret);
             }
             break;
@@ -474,7 +476,7 @@ async function pullMessage() {
                 content: value.content
                   .filter(v => typeof v === 'string')
                   .join(''),
-                from_uin: value.from_uin,
+                send_uin: value.from_uin,
                 time: new Date(value.time * 1000),
               };
 
@@ -487,6 +489,7 @@ async function pullMessage() {
               if (nick) {
                 ret.nick = nick;
               }
+              ret.markname = knownMarknames[value.from_uin];
               arr.push(ret);
             }
             break;
