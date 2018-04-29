@@ -24,7 +24,7 @@ function loadCache() {
       fs.readFileSync(`cache/${uin}.json`, { encoding: 'utf8' }),
     );
     knownNicknames = cache.knownNicknames;
-    knownNicknames[2037830396] = '系统消息';
+    knownNicknames[2037830396] = knownNicknames[2037830396] || '系统消息';
     knownMarknames = cache.knownMarknames;
     knownGroups = cache.knownGroups;
     console.log('Cache loaded.');
