@@ -59,8 +59,6 @@ async function main() {
         waitForSigInt,
         qqclient.pullMessage(),
       ]);
-      console.log(messages);
-
       for (const message of messages) {
         await onMessage(message);
       }
