@@ -28,6 +28,8 @@ async function loginWithCookie() {
     return false;
   }
 
+  psessionid = resp.result.psessionid;
+
   resp = await request.getJSON(
     `http://s.web2.qq.com/api/getvfwebqq?ptwebqq=${ptwebqq}&clientid=${clientid}&psessionid=${psessionid}&t=${Date.now()}`,
   );
@@ -101,7 +103,9 @@ function hashDigest(uin, ptwebqq) {
 
 function checkRetCode(code, message) {
   if (code !== 0) {
-    throw new Error(message || `Request return error code: ${code}`);
+    throw new Error(
+      message ? `${message}: ${code}` : `Request return error code: ${code}`,
+    );
   }
 }
 
@@ -293,14 +297,21 @@ async function queryGroupMembers(gid) {
 }
 
 async function pullMessage() {
-  const resp = await request.postForm('http://d1.web2.qq.com/channel/poll2', {
-    r: JSON.stringify({
-      ptwebqq,
-      clientid,
-      psessionid,
-      key: '',
-    }),
-  });
+  const resp = await request.postForm(
+    'http://d1.web2.qq.com/channel/poll2',
+    {
+      r: JSON.stringify({
+        ptwebqq,
+        clientid,
+        psessionid,
+        key: '',
+      }),
+    },
+    {
+      ...DEFAULT_HEADERS,
+      Referer: 'http://d1.web2.qq.com/proxy.html?v=20151105001&callback=1&id=2',
+    },
+  );
   if (!resp) {
     return [];
   }
