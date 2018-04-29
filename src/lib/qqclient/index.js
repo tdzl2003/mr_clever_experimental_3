@@ -1,4 +1,5 @@
 const request = require('./request');
+const fs = require('fs');
 const { DEFAULT_HEADERS, SMART_QQ_URL } = require('./constants');
 
 const clientid = 53999199;
@@ -10,9 +11,42 @@ let selfInfo = null;
 
 let friends = [];
 
-const knownNicknames = {}; // uin => nickname
-const knownMarknames = {}; // uin => marknames
-const knownGroups = {}; // gid => { name, code, members: [], cards: {uin => card} }
+let knownNicknames = {}; // uin => nickname
+let knownMarknames = {}; // uin => marknames
+let knownGroups = {}; // gid => { name, code, members: [], cards: {uin => card} }
+
+function loadCache() {
+  const { uin } = selfInfo;
+  try {
+    const cache = JSON.parse(
+      fs.readFileSync(`cache/${uin}.json`, { encoding: 'utf8' }),
+    );
+    knownNicknames = cache.knownNicknames;
+    knownMarknames = cache.knownMarknames;
+    knownGroups = cache.knownGroups;
+    console.log('Cache loaded.');
+  } catch (e) {
+    console.log('No cache available.');
+  }
+}
+
+function saveCache() {
+  if (!selfInfo) {
+    return;
+  }
+  const { uin } = selfInfo;
+  if (!fs.existsSync('cache')) {
+    fs.mkdirSync('cache');
+  }
+  fs.writeFileSync(
+    `cache/${uin}.json`,
+    JSON.stringify({
+      knownNicknames,
+      knownMarknames,
+      knownGroups,
+    }),
+  );
+}
 
 async function loginWithCookie() {
   ptwebqq = request.getCookie(SMART_QQ_URL, 'ptwebqq');
@@ -176,7 +210,7 @@ async function loginWithQrCode() {
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       if (retcode === 0) {
-        console.log(await request.get(redirection_url));
+        await request.get(redirection_url);
         require('../server/state').setLoginQrCode(null);
         // Login successed.
         return;
@@ -191,6 +225,7 @@ async function loginWithQrCode() {
 
 async function login() {
   // try cookie.
+  console.log('Logining...');
   if (!(await loginWithCookie())) {
     // try qrcode:
     await loginWithQrCode();
@@ -205,6 +240,7 @@ async function login() {
     );
   }
 
+  console.log('Fetching base information.');
   await getSelfInfo();
   await queryFriendAccounts();
   // get_online_friends_list();
@@ -437,7 +473,9 @@ async function pullMessage() {
       ptwebqq = resp.p;
       return [];
     }
-    case 1202:
+    case 1202: {
+      return [];
+    }
     default: {
       console.log(resp);
       throw new Error(`Failed to pull message, code: ${resp.retcode}`);
@@ -447,3 +485,6 @@ async function pullMessage() {
 
 exports.login = login;
 exports.pullMessage = pullMessage;
+
+exports.loadCache = loadCache;
+exports.saveCache = saveCache;
