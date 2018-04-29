@@ -149,6 +149,7 @@ async function autoTry(callback) {
       return await callback();
     } catch (e) {
       console.warn(e);
+      await new Promise(resolve => setTimeout(resolve, 1000));
       console.log('Retrying...');
     }
   }
@@ -242,20 +243,22 @@ async function login() {
 
   console.log('Fetching base information.');
   await getSelfInfo();
-  await queryFriendAccounts();
-  // get_online_friends_list();
-  await queryGroupList();
+  //await queryFriendAccounts();
+  await getOnlineFriendsList();
+  //await queryGroupList();
   // get_group_list_with_group_code();
 }
 
-async function getSelfInfo() {
-  const resp = await request.getJSON(
-    `http://s.web2.qq.com/api/get_self_info2?t=${Date.now() / 1000}`,
-  );
-  if (resp.retcode != 0) {
-    throw new Error('Failed to get self info.');
-  }
-  selfInfo = resp.result;
+function getSelfInfo() {
+  return autoTry(async () => {
+    const resp = await request.getJSON(
+      `http://s.web2.qq.com/api/get_self_info2?t=${Date.now() / 1000}`,
+    );
+    if (resp.retcode != 0) {
+      throw new Error('Failed to get self info.');
+    }
+    selfInfo = resp.result;
+  });
 }
 
 function bkn() {
@@ -351,6 +354,21 @@ async function queryGroupMembers(gid) {
   return record;
 }
 
+function getOnlineFriendsList() {
+  return autoTry(async () => {
+    const resp = await request.getJSON(
+      `http://d1.web2.qq.com/channel/get_online_buddies2?vfwebqq=${vfwebqq}&clientid=${clientid}&psessionid=${psessionid}&t=${Date.now()}'`,
+      {
+        ...DEFAULT_HEADERS,
+        Referer:
+          'http://d1.web2.qq.com/proxy.html?v=20151105001&callback=1&id=2',
+      },
+    );
+
+    checkRetCode(resp.retcode);
+  });
+}
+
 async function pullMessage() {
   const resp = await request.postForm(
     'http://d1.web2.qq.com/channel/poll2',
@@ -370,7 +388,15 @@ async function pullMessage() {
   if (!resp) {
     return [];
   }
+  if (resp.retcode === 0 && resp.errmsg === 'error') {
+    await getOnlineFriendsList();
+    return pullMessage();
+  }
   switch (resp.retcode) {
+    case 103: {
+      // 这个错误需要重新登陆。
+      break;
+    }
     case 0: {
       // receive ok.
       if (!resp.result) {

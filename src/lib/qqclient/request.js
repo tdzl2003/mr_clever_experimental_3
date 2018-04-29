@@ -1,9 +1,8 @@
 const { DEFAULT_HEADERS } = require('./constants');
 
 const FileCookieStore = require('./filestore').FileCookieStore;
-const jar = require('request-promise').jar(
-  new FileCookieStore('./cookie.json', { encrypt: false }),
-);
+const cookieStore = new FileCookieStore('./cookie.json', { encrypt: false });
+const jar = require('request-promise').jar(cookieStore);
 
 const request = require('request-promise').defaults({
   jar,
@@ -54,4 +53,9 @@ exports.getJSON = async function(url, headers) {
 exports.getCookie = function(domain, key) {
   const resp = jar.getCookies(domain).find(v => v.key === key);
   return resp && resp.value;
+};
+
+exports.clearCookie = function() {
+  cookieStore.idx = {};
+  cookieStore.flush();
 };

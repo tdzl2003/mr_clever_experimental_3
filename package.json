@@ -20,9 +20,7 @@
     "nodemon": "^1.17.3"
   },
   "nodemonConfig": {
-    "ignore": [
-      "cookie.json"
-    ],
+    "ignore": ["cookie.json", "cache/*", "data/*"],
     "delay": "2500"
   }
 }
