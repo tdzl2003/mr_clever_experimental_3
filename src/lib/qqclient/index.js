@@ -11,7 +11,9 @@ let selfInfo = null;
 
 let friends = [];
 
-let knownNicknames = {}; // uin => nickname
+let knownNicknames = {
+  2037830396: '系统消息',
+}; // uin => nickname
 let knownMarknames = {}; // uin => marknames
 let knownGroups = {}; // gid => { name, code, members: [], cards: {uin => card} }
 
@@ -22,6 +24,7 @@ function loadCache() {
       fs.readFileSync(`cache/${uin}.json`, { encoding: 'utf8' }),
     );
     knownNicknames = cache.knownNicknames;
+    knownNicknames[2037830396] = '系统消息';
     knownMarknames = cache.knownMarknames;
     knownGroups = cache.knownGroups;
     console.log('Cache loaded.');
@@ -437,10 +440,7 @@ async function pullMessage() {
                   );
                 }
               }
-              let nick =
-                value.send_uin === 2037830396
-                  ? '系统消息'
-                  : knownNicknames[value.send_uin];
+              let nick = knownNicknames[value.send_uin];
 
               // 昵称或者群名片未知。
               if (
