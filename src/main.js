@@ -21,10 +21,8 @@ if (config.features.recordMessage) {
   if (!fs.existsSync('data')) {
     fs.mkdirSync('data');
   }
-  const { RollingFileStream } = require('streamroller');
-  const stream = new RollingFileStream('./data/message.csv', 4 << 20, {
-    compress: true,
-    keepFileExt: true,
+  const stream = new fs.createWriteStream('./data/message.csv', {
+    flags: 'a',
   });
   csvStream.pipe(stream);
 }
