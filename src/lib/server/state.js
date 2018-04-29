@@ -5,7 +5,13 @@ let image = null;
 
 root.get('/state', ctx => {
   if (image) {
-    ctx.body = renderHTML(`<img src="/qrcode?t=${Date.now()}" />`);
+    ctx.body = renderHTML(`<img src="/qrcode?t=${Date.now()}" id="qrcode" />
+    <script type="application/javascript">
+      var el = document.querySelector('#qrcode');
+      setInterval(function() {
+        el.src = '/qrcode?t=' + Date.now();
+      }, 1000);
+    </script>`);
   }
 });
 
