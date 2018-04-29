@@ -19,7 +19,7 @@ exports.get = function(url, options) {
 
 exports.postForm = async function(url, data, headers) {
   if (DEBUG) {
-    console.log(`POST ${url} ${JSON.stringify(data).slice(0, 200)}\n`);
+    console.log(`POST ${url} ${JSON.stringify(data).slice(0, 500)}\n`);
   }
 
   const resp = await request.post(url, {
@@ -29,7 +29,7 @@ exports.postForm = async function(url, data, headers) {
   });
 
   if (DEBUG) {
-    console.log(`RESP: ${JSON.stringify(resp).slice(0, 200)}\n`);
+    console.log(`RESP: ${JSON.stringify(resp).slice(0, 500)}\n`);
   }
   return resp;
 };
@@ -45,7 +45,7 @@ exports.getJSON = async function(url, headers) {
   });
 
   if (DEBUG) {
-    console.log(`RESP: ${JSON.stringify(resp).slice(0, 200)}\n`);
+    console.log(`RESP: ${JSON.stringify(resp).slice(0, 500)}\n`);
   }
   return resp;
 };
