@@ -419,7 +419,7 @@ async function pullMessage() {
                 content: value.content
                   .filter(v => typeof v === 'string')
                   .join(''),
-                from_uin: value.from_uin,
+                send_uin: value.send_uin,
                 group_code: value.group_code,
                 time: new Date(value.time * 1000),
               };
@@ -437,7 +437,7 @@ async function pullMessage() {
                   );
                 }
               }
-              let nick = knownNicknames[value.from_uin];
+              let nick = knownNicknames[value.send_uin];
 
               // 昵称或者群名片未知。
               if (
@@ -449,13 +449,13 @@ async function pullMessage() {
                   await queryGroupMembers(value.group_code);
                   groupMemberQueried[value.group_code] = true;
                 } catch (e) {}
-                nick = knownNicknames[value.from_uin];
+                nick = knownNicknames[value.send_uin];
               }
 
               if (group) {
                 ret.group_name = group.name;
                 if (group.cards) {
-                  ret.card_name = group.cards[value.from_uin];
+                  ret.card_name = group.cards[value.send_uin];
                 }
               }
               if (nick) {
