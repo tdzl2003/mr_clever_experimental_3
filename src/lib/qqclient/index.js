@@ -437,7 +437,10 @@ async function pullMessage() {
                   );
                 }
               }
-              let nick = knownNicknames[value.send_uin];
+              let nick =
+                value.send_uin === 2037830396
+                  ? '系统消息'
+                  : knownNicknames[value.send_uin];
 
               // 昵称或者群名片未知。
               if (
