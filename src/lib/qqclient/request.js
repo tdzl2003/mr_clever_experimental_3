@@ -9,7 +9,7 @@ const request = require('request-promise').defaults({
   jar,
 });
 
-const DEBUG = __DEV__ && true;
+const DEBUG = __DEV__;
 
 exports.get = function(url, options) {
   if (DEBUG) {

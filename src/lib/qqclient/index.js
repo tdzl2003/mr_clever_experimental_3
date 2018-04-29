@@ -109,6 +109,19 @@ function checkRetCode(code, message) {
   }
 }
 
+async function autoTry(callback) {
+  for (let tryCount = 0; tryCount < 9; tryCount++) {
+    try {
+      return await callback();
+    } catch (e) {
+      console.warn(e);
+      console.log('Retrying...');
+    }
+  }
+  // last time do not catch error.
+  return await callback();
+}
+
 async function loginWithQrCode() {
   const html = await request.get(
     'https://ui.ptlogin2.qq.com/cgi-bin/login?daid=164&target=self&style=16&mibao_css=m_webqq&appid=501004106&enable_qlogin=0&no_verifyimg=1&s_url=http%3A%2F%2Fw.qq.com%2Fproxy.html&f_url=loginerroralert&strong_login=1&login_state=10&t=20131024001',
@@ -156,7 +169,6 @@ async function loginWithQrCode() {
       let redirection_url;
       function ptuiCB(...args) {
         retcode = args[0] | 0;
-        console.log(args);
         redirection_url = args[2];
       }
       eval(resp);
@@ -220,50 +232,54 @@ function bkn() {
   return hash_str;
 }
 
-async function queryFriendAccounts() {
-  const resp = await request.postForm(
-    'http://s.web2.qq.com/api/get_user_friends2',
-    {
-      r: JSON.stringify({
-        vfwebqq,
-        hash: hashDigest(selfInfo.uin, ptwebqq),
-      }),
-    },
-  );
+function queryFriendAccounts() {
+  return autoTry(async () => {
+    const resp = await request.postForm(
+      'http://s.web2.qq.com/api/get_user_friends2',
+      {
+        r: JSON.stringify({
+          vfwebqq,
+          hash: hashDigest(selfInfo.uin, ptwebqq),
+        }),
+      },
+    );
 
-  checkRetCode(resp.retcode, 'Failed to query friend list.');
+    checkRetCode(resp.retcode, 'Failed to query friend list.');
 
-  // const { friends, categories, info, marknames } = resp.result;
+    // const { friends, categories, info, marknames } = resp.result;
 
-  friends = resp.result.friends.map(v => v.uin);
+    friends = resp.result.friends.map(v => v.uin);
 
-  for (const k of resp.result.info) {
-    knownNicknames[k.uin] = k.nick;
-  }
-  for (const k of resp.result.marknames) {
-    knownMarknames[k.uin] = k.markname;
-  }
+    for (const k of resp.result.info) {
+      knownNicknames[k.uin] = k.nick;
+    }
+    for (const k of resp.result.marknames) {
+      knownMarknames[k.uin] = k.markname;
+    }
+  });
 }
 
 async function queryGroupList() {
-  const resp = await request.postForm(
-    'http://s.web2.qq.com/api/get_group_name_list_mask2',
-    {
-      r: JSON.stringify({
-        vfwebqq,
-        hash: hashDigest(selfInfo.uin, ptwebqq),
-      }),
-    },
-  );
+  return autoTry(async () => {
+    const resp = await request.postForm(
+      'http://s.web2.qq.com/api/get_group_name_list_mask2',
+      {
+        r: JSON.stringify({
+          vfwebqq,
+          hash: hashDigest(selfInfo.uin, ptwebqq),
+        }),
+      },
+    );
 
-  checkRetCode(resp.retcode, 'Failed to query group list.');
+    checkRetCode(resp.retcode, 'Failed to query group list.');
 
-  for (const item of resp.result.gnamelist) {
-    const v = knownGroups || knownGroups[item.gid];
+    for (const item of resp.result.gnamelist) {
+      const v = (knownGroups[item.gid] = knownGroups[item.gid] || {});
 
-    v.code = item.code;
-    v.name = item.name;
-  }
+      v.code = item.code;
+      v.name = item.name;
+    }
+  });
 }
 
 async function queryGroupMembers(gid) {
@@ -271,29 +287,32 @@ async function queryGroupMembers(gid) {
     // maybe a new group.
     await queryGroupList();
   }
+
   const record = knownGroups[gid];
   if (!record) {
     throw new Error(`Unknown group ${gid}`);
   }
+  await autoTry(async () => {
+    const resp = await request.getJSON(
+      `http://s.web2.qq.com/api/get_group_info_ext2?gcode=${
+        record.code
+      }&vfwebqq=${vfwebqq}&t=${Date.now()}`,
+    );
 
-  const resp = await request.getJSON(
-    `http://s.web2.qq.com/api/get_group_info_ext2?gcode=${
-      record.code
-    }&vfwebqq=${vfwebqq}&t=${Date.now()}`,
-  );
+    checkRetCode(resp.retcode, 'Failed to query group member list.');
 
-  checkRetCode(resp.retcode, 'Failed to query group member list.');
+    record.cards = record.cards || {};
+    record.members = resp.result.minfo.map(v => v.uin);
 
-  record.cards = record.cards || {};
-  record.members = resp.result.minfo.map(v => v.uin);
+    for (const k of resp.result.cards) {
+      record.cards[k.muin] = k.card;
+    }
 
-  for (const k of resp.result.cards) {
-    record.cards[k.muin] = k.card;
-  }
-
-  for (const k of resp.result.minfo) {
-    knownNicknames[k.uin] = k.nick;
-  }
+    for (const k of resp.result.minfo) {
+      knownNicknames[k.uin] = k.nick;
+    }
+  });
+  return record;
 }
 
 async function pullMessage() {
@@ -318,9 +337,100 @@ async function pullMessage() {
   switch (resp.retcode) {
     case 0: {
       // receive ok.
-      if (!resp.result || !resp.result.length) {
+      if (!resp.result) {
         return [];
       }
+      const { value } = resp.result;
+
+      const arr = [];
+      let groupListQueried = false;
+      let groupMemberQueried = {};
+      let friendListQueried = false;
+
+      for (const message of resp.result) {
+        const value = message.value;
+        switch (message.poll_type) {
+          case 'group_message':
+            {
+              const ret = {
+                type: 'group_message',
+                content: value.content
+                  .filter(v => typeof v === 'string')
+                  .join(''),
+                from_uin: value.from_uin,
+                group_code: value.group_code,
+                time: new Date(value.time * 1000),
+              };
+              let group = knownGroups[value.group_code];
+              if (!group && !groupListQueried) {
+                groupListQueried = true;
+                await queryGroupList();
+                group = knownGroups[value.group_code];
+                if (!group) {
+                  console.warn(`Cannot find group ${value.group_code}`);
+                  console.log(
+                    `This message will have no nick: ${JSON.stringify(
+                      message,
+                    )}`,
+                  );
+                }
+              }
+              let nick = knownNicknames[value.from_uin];
+
+              // 昵称或者群名片未知。
+              if (
+                group &&
+                (!nick || !group.cards) &&
+                !groupMemberQueried[value.group_code]
+              ) {
+                try {
+                  await queryGroupMembers(value.group_code);
+                  groupMemberQueried[value.group_code] = true;
+                } catch (e) {}
+                nick = knownNicknames[value.from_uin];
+              }
+
+              if (group) {
+                ret.group_name = group.name;
+                if (group.cards) {
+                  ret.card_name = group.cards[value.from_uin];
+                }
+              }
+              if (nick) {
+                ret.nick = nick;
+              }
+              arr.push(ret);
+            }
+            break;
+          case 'message':
+            {
+              const ret = {
+                type: 'message',
+                content: value.content
+                  .filter(v => typeof v === 'string')
+                  .join(''),
+                from_uin: value.from_uin,
+                time: new Date(value.time * 1000),
+              };
+
+              let nick = knownNicknames[value.from_uin];
+              if (!nick && !friendListQueried) {
+                friendListQueried = true;
+                await queryFriendAccounts();
+                nick = knownNicknames[value.from_uin];
+              }
+              if (nick) {
+                ret.nick = nick;
+              }
+              arr.push(ret);
+            }
+            break;
+          default:
+            console.warn(`Unknown message type ${message.pool_type}`);
+            console.log(`Ignoring: ${JSON.stringify(message)}`);
+        }
+      }
+      return arr;
     }
     case 116: {
       // ptwebqq changed.

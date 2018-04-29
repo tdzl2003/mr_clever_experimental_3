@@ -11,8 +11,6 @@ const waitForSigInt = new Promise((resolve, reject) => {
 async function main() {
   await qqclient.login();
 
-  console.log('Bye.');
-
   for (;;) {
     const messages = await Promise.race([
       waitForSigInt,
@@ -20,6 +18,8 @@ async function main() {
     ]);
     console.log(messages);
   }
+
+  console.log('Bye.');
 
   // throw new Error('break');
 }
