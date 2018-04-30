@@ -344,11 +344,11 @@ async function queryGroupMembers(gid) {
     record.cards = record.cards || {};
     record.members = resp.result.minfo.map(v => v.uin);
 
-    for (const k of resp.result.cards) {
+    for (const k of resp.result.cards || []) {
       record.cards[k.muin] = k.card;
     }
 
-    for (const k of resp.result.minfo) {
+    for (const k of resp.result.minfo || []) {
       knownNicknames[k.uin] = k.nick;
     }
   });
