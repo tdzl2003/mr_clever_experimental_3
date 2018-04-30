@@ -49,6 +49,7 @@ function saveCache() {
       knownGroups,
     }),
   );
+  console.log('Cache saved.');
 }
 
 async function loginWithCookie() {
