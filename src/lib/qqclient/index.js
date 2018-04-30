@@ -257,9 +257,7 @@ function getSelfInfo() {
     const resp = await request.getJSON(
       `http://s.web2.qq.com/api/get_self_info2?t=${Date.now() / 1000}`,
     );
-    if (resp.retcode != 0) {
-      throw new Error('Failed to get self info.');
-    }
+    checkRetCode(resp.retcode, 'Failed to get self info.');
     selfInfo = resp.result;
   });
 }
@@ -367,6 +365,10 @@ function getOnlineFriendsList() {
           'http://d1.web2.qq.com/proxy.html?v=20151105001&callback=1&id=2',
       },
     );
+
+    if (resp.retcode === 6) {
+      vfwebqq = resp.result.vfwebqq;
+    }
 
     checkRetCode(resp.retcode);
   });
